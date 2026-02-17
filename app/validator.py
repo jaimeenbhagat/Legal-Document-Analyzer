@@ -11,7 +11,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.document_loaders import PyPDFLoader
 from pathlib import Path
 
-from backend.config import get_settings
+from app.config import get_settings
 
 
 # Legal document indicators - keywords and patterns commonly found in legal documents
@@ -112,7 +112,7 @@ class DocumentValidator:
         
         # Initialize LLM for document classification
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash",
             google_api_key=self.settings.google_api_key,
             temperature=0.1,  # Low temperature for consistent classification
             convert_system_message_to_human=True
