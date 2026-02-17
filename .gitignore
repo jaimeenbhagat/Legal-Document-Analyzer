@@ -39,3 +39,5 @@ data/faiss_index/*
 
 # Logs
 *.log
+
+/node_modules
