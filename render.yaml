@@ -1,22 +1,16 @@
 # Render Blueprint for Legal AI System
-# Deploy both frontend and backend on a single service
+# Single Docker container serving both frontend and backend
 
 services:
   - type: web
     name: legal-ai-system
-    runtime: python
+    runtime: docker
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      cd frontend && npm install && npm run build
-    startCommand: |
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-      cd frontend && PORT=3000 npm run start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: GOOGLE_API_KEY
         sync: false
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: NODE_VERSION
-        value: 20
+      - key: PORT
+        value: 10000
     healthCheckPath: /health
+    autoDeploy: true

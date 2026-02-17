@@ -1,42 +1,50 @@
 import type { NextConfig } from "next";
 
 /**
- * Next.js Configuration with API Proxy
+ * Next.js Configuration
  * 
- * Rewrites proxy all /api/* requests to the FastAPI backend.
- * This allows the frontend to call /api/chat instead of http://localhost:8000/chat
+ * For Docker deployment: Uses static export (output: 'export')
+ * The built files are served by FastAPI from the same container.
  * 
- * For PRODUCTION:
- * Set NEXT_PUBLIC_BACKEND_URL environment variable in Vercel to your deployed backend URL
- * Example: https://your-backend.onrender.com
+ * For Development: Uses rewrites to proxy /api/* to FastAPI backend
  */
 
-// Backend URL - defaults to localhost for development
+// Check if we're building for static export (Docker)
+const isStaticExport = process.env.STATIC_EXPORT === 'true';
+
+// Backend URL for development proxy
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:8000';
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
-  
-  // Required for external backend connections
-  async rewrites() {
-    return [
-      // Proxy all /api/* requests to FastAPI backend
-      {
-        source: '/api/:path*',
-        destination: `${BACKEND_URL}/:path*`,
-      },
-    ];
-  },
+  // Static export for Docker deployment
+  ...(isStaticExport && {
+    output: 'export',
+    trailingSlash: true,
+    // Disable image optimization for static export
+    images: {
+      unoptimized: true,
+    },
+  }),
 
-  // Allow images from backend if needed
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
-  },
+  // Development mode: proxy API requests
+  ...(!isStaticExport && {
+    async rewrites() {
+      return [
+        {
+          source: '/api/:path*',
+          destination: `${BACKEND_URL}/:path*`,
+        },
+      ];
+    },
+    images: {
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: '**',
+        },
+      ],
+    },
+  }),
 };
 
 export default nextConfig;

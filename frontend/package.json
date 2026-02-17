@@ -6,7 +6,8 @@
     "dev": "concurrently --kill-others \"npm run backend\" \"npm run frontend:dev\"",
     "frontend:dev": "next dev",
     "backend": "node scripts/start-backend.js",
-    "build": "next build",
+    "build": "STATIC_EXPORT=true next build",
+    "build:dev": "next build",
     "start": "next start",
     "lint": "eslint"
   },

@@ -6,6 +6,14 @@ Manages all environment variables and application settings.
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
+from pathlib import Path
+
+
+# Detect if running in Docker (check for /app directory)
+IS_DOCKER = Path("/app").exists() and Path("/app/data").exists()
+
+# Base path for data storage
+DATA_BASE_PATH = "/app/data" if IS_DOCKER else "./data"
 
 
 class Settings(BaseSettings):
@@ -36,9 +44,9 @@ class Settings(BaseSettings):
     # Keep low for legal analysis to reduce hallucination
     temperature: float = 0.1
     
-    # Storage Paths
-    pdf_storage_path: str = "./data/pdfs"
-    faiss_index_path: str = "./data/faiss_index"
+    # Storage Paths - use Docker paths if in container
+    pdf_storage_path: str = f"{DATA_BASE_PATH}/pdfs"
+    faiss_index_path: str = f"{DATA_BASE_PATH}/faiss_index"
     
     class Config:
         env_file = ".env"
