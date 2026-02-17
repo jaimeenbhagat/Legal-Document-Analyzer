@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  rag-legal-bot:
+    build: .
+    container_name: legal-doc-analyzer
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=200
+      - TOP_K_RETRIEVAL=4
+      - TEMPERATURE=0.1
+    volumes:
+      # Persist uploaded PDFs and FAISS index
+      - ./data/pdfs:/app/data/pdfs
+      - ./data/faiss_index:/app/data/faiss_index
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
