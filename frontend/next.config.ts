@@ -6,18 +6,18 @@ import type { NextConfig } from "next";
  * Rewrites proxy all /api/* requests to the FastAPI backend.
  * This allows the frontend to call /api/chat instead of http://localhost:8000/chat
  * 
- * Benefits:
- * - Single entry point (port 3000 only)
- * - No CORS issues (same-origin requests)
- * - Cleaner API calls in frontend code
- * - Production-ready (just change BACKEND_URL env var)
+ * For PRODUCTION:
+ * Set NEXT_PUBLIC_BACKEND_URL environment variable in Vercel to your deployed backend URL
+ * Example: https://your-backend.onrender.com
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+// Backend URL - defaults to localhost for development
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:8000';
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
   
+  // Required for external backend connections
   async rewrites() {
     return [
       // Proxy all /api/* requests to FastAPI backend
@@ -26,6 +26,16 @@ const nextConfig: NextConfig = {
         destination: `${BACKEND_URL}/:path*`,
       },
     ];
+  },
+
+  // Allow images from backend if needed
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
 };
 

@@ -26,13 +26,19 @@ app = FastAPI(
 )
 
 # CORS Configuration
-# In production with Next.js proxy, CORS is not needed (same-origin requests)
-# This is kept for direct API access during development/testing
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+# In production, set ALLOWED_ORIGINS env var to your Vercel domain
+# Example: ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main-user.vercel.app
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "http://localhost:3000,http://127.0.0.1:3000,https://*.vercel.app"
+).split(",")
+
+# Allow all origins if wildcard is present (for development/Vercel previews)
+allow_all = any("*" in origin for origin in ALLOWED_ORIGINS)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"] if allow_all else ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
