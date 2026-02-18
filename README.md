@@ -1,48 +1,136 @@
-# 🏛️ Legal AI - Document Analysis System
+<div align="center">
 
-A modern, production-ready **Retrieval-Augmented Generation (RAG)** system for intelligent legal document analysis. Built with Python, FastAPI, LangChain, FAISS, Google Gemini AI, and a beautiful Next.js frontend.
+# ⚖️ Legal AI — Document Analysis System
 
-> **⚠️ DISCLAIMER**: This is a document analysis tool, NOT a legal advice system. Always consult a qualified attorney for legal guidance.
+### AI-powered legal document analysis using Retrieval-Augmented Generation (RAG)
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-legal--document--analyzer-7c3aed?style=for-the-badge)](https://legal-document-analyzer-65ex.onrender.com)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+
+**[🚀 Try it Live](https://legal-document-analyzer-65ex.onrender.com)** &nbsp;|&nbsp; **[📖 Quick Start](#-quick-start)** &nbsp;|&nbsp; **[🐳 Docker](#-docker-deployment)**
+
+> ⚠️ **DISCLAIMER**: This tool is for document analysis only and does **not** constitute legal advice. Always consult a qualified attorney for legal guidance.
+
+</div>
+
+---
+
+## 📸 Overview
+
+A production-ready **RAG (Retrieval-Augmented Generation)** system that lets you upload legal PDFs and have intelligent, context-grounded conversations about them. The AI only answers from the content of your documents — no hallucination, no fabrication.
+
+**Upload a court judgment, contract, or legal notice → Ask any question → Get cited, accurate answers in seconds.**
 
 ---
 
 ## ✨ Features
 
-### 🎨 Modern UI/UX
-- **Premium Chat Interface** - Clean, ChatGPT-like conversational UI
-- **Glass Morphism Design** - Modern frosted glass effects with purple gradients
-- **Responsive Layout** - Works seamlessly on desktop and mobile
-- **Dark Sidebar** - Elegant session management with gradient accents
-- **Smooth Transitions** - Polished hover effects and micro-interactions
-- **Drag & Drop Upload** - Intuitive PDF file uploading
+### 🤖 AI & RAG Pipeline
+- **Gemini 2.5 Flash** — Latest Google model for fast, accurate legal reasoning
+- **Semantic Search** — FAISS vector store finds the most relevant document chunks
+- **Gemini Embeddings** — `gemini-embedding-001` for high-quality text vectorization
+- **Cited Answers** — Every response includes page-level citations from source documents
+- **Risk Assessment** — Automatic HIGH / MEDIUM / LOW legal risk classification
+- **Grounded Responses** — AI strictly answers from uploaded content, no hallucination
 
-### 💬 Chat Features
-- **Multi-Session Support** - Create, switch, and manage multiple chat sessions
-- **Session Persistence** - Each session maintains its own conversation history
-- **Smart Naming** - Sessions auto-named based on uploaded documents
-- **Document Context** - Filter queries to specific documents
-- **Quick Actions** - Pre-built prompts for common legal queries
+### � Document Intelligence
+- **Legal Document Validator** — AI-powered classifier rejects non-legal files before processing
+- **Keyword Analysis** — 100+ legal keyword patterns for fast pre-screening
+- **Smart Chunking** — Overlap-aware text splitting preserves context across boundaries
+- **Multi-Document Support** — Upload and query multiple PDFs simultaneously
+- **Document Picker** — Filter queries to a specific document for precision analysis
+- **Supported Types** — Court judgments, contracts, agreements, notices, MOUs, deeds, affidavits, and more
 
-### 📄 Document Analysis
-- **PDF Upload & Processing** - Upload multiple legal documents
-- **Intelligent Chunking** - Smart text splitting for optimal retrieval
-- **Semantic Search** - Find relevant information using vector similarity
-- **Multi-Document Queries** - Search across all uploaded documents
-- **Document Picker** - Select specific documents for focused analysis
+### � Chat Experience
+- **Multi-Session Management** — Create unlimited parallel chat sessions
+- **localStorage Persistence** — All sessions, messages, and documents survive page reloads
+- **Auto Session Naming** — Sessions are automatically named from the uploaded document
+- **Smart Scroll** — New AI responses always scroll to the **top** of the reply, not the bottom
+- **Quick Action Prompts** — One-click buttons for Summarize, Key Clauses, Risks, Obligations
+- **Empty Session Deduplication** — No accumulation of blank "New conversation" entries
+- **Stale State Detection** — If the server restarts, the UI detects it and prompts re-upload
 
-### 🤖 AI-Powered Features
-- **RAG Architecture** - Retrieval-Augmented Generation for accurate answers
-- **Google Gemini Integration** - Powered by Gemini Pro LLM
-- **Context-Aware Responses** - Answers grounded in your documents
-- **Risk Assessment** - Automatic identification of legal risks
-- **No Hallucination** - AI only answers from provided context
+### 🎨 UI / UX
+- **Premium Chat Interface** — Clean, ChatGPT-inspired conversational layout
+- **Glass Morphism Design** — Frosted glass effects with purple/indigo gradient accents
+- **Dark Sidebar** — Session list with document badges and timestamps
+- **Drag & Drop Upload** — Drop PDFs anywhere on the chat area
+- **Responsive Design** — Fully functional on desktop and mobile
+- **Smooth Animations** — Polished micro-interactions throughout
+- **No Hydration Errors** — Two-phase localStorage loading for SSR compatibility
 
-### 🔧 Technical Features
-- **FastAPI Backend** - High-performance async API
-- **FAISS Vector Store** - Fast similarity search
-- **Session Isolation** - Each session has its own vector store
-- **Real-time Health Checks** - Backend status monitoring
-- **Error Handling** - Graceful error recovery and user feedback
+### 🔧 Backend & Infrastructure
+- **FastAPI** — Async Python API with automatic OpenAPI docs
+- **Session Reset API** — `/api/reset` cleanly wipes vector store between sessions
+- **Auto Re-index on Startup** — If FAISS index is lost (server restart), PDFs are automatically re-ingested
+- **Docker Ready** — Single-container deployment with Dockerfile + docker-compose
+- **Render Deployment** — Live on Render with CORS configured for any origin
+- **120s Proxy Timeout** — Handles large documents and slow AI responses gracefully
+
+---
+
+## 🌐 Live Demo
+
+**[https://legal-document-analyzer-65ex.onrender.com](https://legal-document-analyzer-65ex.onrender.com)**
+
+> **Note:** The live demo runs on Render's free tier. The server may take **~30 seconds to wake up** on the first visit (cold start). Once running, it's fast.
+>
+> Because the free tier uses ephemeral storage, uploaded documents are lost when the server restarts. If you see a "server restarted" message, simply re-upload your PDF.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Version | Purpose |
+|-------|-----------|---------|---------|
+| **Frontend** | Next.js | 16.x | React framework with SSR |
+| **Language** | TypeScript | 5.x | Type-safe frontend code |
+| **Styling** | Tailwind CSS | 4.x | Utility-first styling |
+| **Backend** | FastAPI | 0.115 | Async Python API |
+| **Runtime** | Python | 3.11+ | Backend runtime |
+| **RAG Framework** | LangChain | 0.3 | Document pipeline orchestration |
+| **Vector DB** | FAISS | 1.9 | In-memory similarity search |
+| **Embeddings** | Gemini Embedding 001 | — | Text vectorization |
+| **LLM** | Gemini 2.5 Flash | — | Answer generation |
+| **PDF Parsing** | PyPDF | 5.x | Text extraction from PDFs |
+| **Containerization** | Docker | — | Single-container deployment |
+| **Hosting** | Render | — | Cloud deployment platform |
+
+---
+
+## 📁 Project Structure
+
+```
+Legal-Document-Analyzer/
+├── app/                          # Python Backend (FastAPI)
+│   ├── main.py                  # All API endpoints + startup logic
+│   ├── chat.py                  # RAG chatbot (retrieval + generation)
+│   ├── ingest.py                # PDF loading, chunking, embedding, FAISS
+│   ├── validator.py             # Legal document classifier (AI + keywords)
+│   ├── prompts.py               # LLM prompt templates
+│   └── config.py                # Settings from environment variables
+│
+├── frontend/                     # Next.js Frontend
+│   ├── app/
+│   │   ├── page.tsx             # Root page
+│   │   ├── layout.tsx           # App shell
+│   │   └── globals.css          # Global styles
+│   ├── components/
+│   │   └── PremiumChatInterface.tsx  # Entire UI — sessions, chat, upload
+│   └── app/api.ts               # Typed API client (fetch wrappers)
+│
+├── data/                         # Runtime data (gitignored)
+│   ├── pdfs/                    # Uploaded PDF files
+│   └── faiss_index/             # FAISS vector index
+│
+├── Dockerfile                    # Single-container build
+├── docker-compose.yml            # Local Docker orchestration
+├── requirements.txt              # Python dependencies
+└── .env                          # Environment variables (never commit)
+```
 
 ---
 
@@ -50,183 +138,186 @@ A modern, production-ready **Retrieval-Augmented Generation (RAG)** system for i
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 18+
-- Google Gemini API Key
+- **Python 3.11+**
+- **Node.js 18+**
+- **Google Gemini API Key** — Get one free at [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### 1. Clone & Setup
+### 1. Clone the Repository
 
-\`\`\`bash
-# Navigate to the project
-cd "Legal Document Analysis System using Retrieval-Augmented Generation (RAG)"
+```bash
+git clone https://github.com/jaimeenbhagat/Legal-Document-Analyzer.git
+cd Legal-Document-Analyzer
+```
 
-# Create Python virtual environment
+### 2. Set Up Python Environment
+
+```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate          # macOS/Linux
+# venv\Scripts\activate           # Windows
 
-# Install Python dependencies
 pip install -r requirements.txt
-\`\`\`
+```
 
-### 2. Configure Environment
+### 3. Configure Environment Variables
 
-\`\`\`bash
-# Copy example env file
-cp .env.example .env
+```bash
+cp .env.example .env              # or create .env manually
+```
 
-# Edit .env and add your Gemini API key
+Edit `.env`:
+```properties
 GOOGLE_API_KEY=your_gemini_api_key_here
-\`\`\`
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+TOP_K_RETRIEVAL=4
+PDF_STORAGE_PATH=./data/pdfs
+FAISS_INDEX_PATH=./data/faiss_index
+```
 
-### 3. Start Backend
+### 4. Install Frontend Dependencies
 
-\`\`\`bash
-# From project root
-cd app
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-\`\`\`
-
-### 4. Start Frontend
-
-\`\`\`bash
-# From project root (in a new terminal)
+```bash
 cd frontend
 npm install
-npm run dev
-\`\`\`
+cd ..
+```
 
-### 5. Open Application
+### 5. Run the App (One Command)
 
-Visit **http://localhost:3000** in your browser.
+```bash
+npm run dev          # from the project root — starts both backend and frontend
+```
 
----
+Or start them separately:
 
-## 📁 Project Structure
+```bash
+# Terminal 1 — Backend
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-\`\`\`
-Legal Document Analysis System/
-├── app/                      # Backend (FastAPI)
-│   ├── main.py              # API endpoints
-│   ├── chat.py              # RAG chat engine
-│   ├── ingest.py            # PDF processing
-│   ├── prompts.py           # LLM prompt templates
-│   └── config.py            # Configuration
-│
-├── frontend/                 # Frontend (Next.js)
-│   ├── app/
-│   │   ├── page.tsx         # Main page
-│   │   ├── layout.tsx       # App layout
-│   │   └── globals.css      # Global styles
-│   ├── components/
-│   │   └── PremiumChatInterface.tsx  # Main chat UI
-│   └── lib/
-│       └── api.ts           # API client
-│
-├── data/                     # Data storage
-│   ├── pdfs/                # Uploaded PDFs
-│   └── faiss_index/         # Vector stores
-│
-├── requirements.txt          # Python dependencies
-├── docker-compose.yml        # Docker setup
-├── Dockerfile               # Container config
-└── README.md                # This file
-\`\`\`
+# Terminal 2 — Frontend
+cd frontend && npm run dev
+```
+
+### 6. Open in Browser
+
+**[http://localhost:3000](http://localhost:3000)**
+
+Backend API docs: **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
 
 ## 🎯 Usage Guide
 
-### Uploading Documents
-
-1. Click the **paperclip icon** or drag & drop PDF files
-2. Wait for processing (documents are chunked and embedded)
-3. See uploaded documents in the sidebar
+### Uploading a Legal Document
+1. Drag & drop a PDF onto the chat area, **or** click the paperclip icon
+2. The validator checks if it's a legal document (rejects non-legal files automatically)
+3. Wait ~10–30 seconds for embedding generation
+4. You'll see a success message with quick-action prompts
 
 ### Asking Questions
+- Type any natural language question: *"What are the termination clauses?"*
+- Press **Enter** or click the send button
+- The AI retrieves the most relevant chunks and generates a grounded answer with citations
 
-1. Type your question in the input box
-2. Press **Enter** or click the send button
-3. AI responds with context from your documents
-
-### Quick Actions
-
-Use pre-built prompts for common tasks:
-- 📋 **Summarize** - Get a document summary
-- ⚖️ **Key Clauses** - Extract important clauses
-- ⚠️ **Risks** - Identify potential risks
-- 💰 **Obligations** - List all obligations
+### Quick Actions (one click)
+| Button | Query sent |
+|--------|-----------|
+| 📋 Summarize | "Summarize this document" |
+| ⚖️ Key clauses | "What are the key clauses?" |
+| ⚠️ Risks | "Identify potential risks" |
+| 💰 Obligations | "List all obligations" |
 
 ### Managing Sessions
-
-- Click **New Chat** to start a fresh session
-- Switch between sessions in the sidebar
-- Each session maintains its own documents and history
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | Next.js 15, React, TypeScript | Modern web UI |
-| **Styling** | Tailwind CSS | Utility-first CSS |
-| **Backend** | FastAPI, Python 3.11+ | High-performance API |
-| **RAG** | LangChain | Document processing |
-| **Vector DB** | FAISS | Similarity search |
-| **Embeddings** | Google Gemini | Text vectorization |
-| **LLM** | Gemini Pro | Answer generation |
-| **PDF** | PyPDF | Document parsing |
+- **New Chat** — Creates a fresh session (backend is reset, previous docs cleared)
+- **Switch Session** — Click any session in the sidebar to restore its messages and documents
+- **Delete Session** — Hover over a session and click the trash icon
+- **Reload page** — All sessions and messages are restored from localStorage automatically
 
 ---
 
-## 🔑 API Endpoints
+## 🔑 API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| \`GET\` | \`/health\` | Backend health check |
-| \`POST\` | \`/upload\` | Upload PDF documents |
-| \`POST\` | \`/chat\` | Send chat message |
-| \`GET\` | \`/documents\` | List uploaded documents |
+| `GET` | `/health` | Health check — returns vector store status and available documents |
+| `POST` | `/upload-pdf` | Upload one or more PDFs — validates, embeds, and indexes |
+| `POST` | `/chat` | Ask a question — returns answer with citations and risk level |
+| `GET` | `/documents` | List all documents currently in the vector store |
+| `POST` | `/reset` | Clear all uploaded documents and the vector store |
+| `GET` | `/docs` | Interactive Swagger UI (local only) |
+
+**Example chat request:**
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What are the termination clauses?", "document_filter": ["contract.pdf"]}'
+```
 
 ---
 
 ## 🐳 Docker Deployment
 
-\`\`\`bash
-# Build and run with Docker Compose
-docker-compose up --build
+### Build and run locally
 
-# Access at http://localhost:3000
-\`\`\`
+```bash
+docker-compose up --build
+```
+
+Open **[http://localhost:3000](http://localhost:3000)**
+
+### Deploy to Render (one-click)
+
+1. Push your code to GitHub
+2. Create a new **Web Service** on [Render](https://render.com)
+3. Connect your repository
+4. Set **Build Command**: `docker build -t app .`
+5. Add environment variable: `GOOGLE_API_KEY=your_key_here`
+6. Deploy — Render builds the Docker image and serves both frontend and backend
+
+> **Persistent Storage on Render:** The free tier uses ephemeral disk. For permanent document storage across restarts, add a Render Persistent Disk (~$1/month) mounted at `/data`.
 
 ---
 
-## 🔒 Security Notes
+## 🔒 Security
 
-- API keys are stored in \`.env\` (never commit this file)
-- Session data is isolated per user session
-- No data is sent to external services except Gemini API
-- Documents are stored locally in \`data/\` directory
+- API keys are stored in `.env` and **never committed** to git (`.gitignore` excludes `.env`)
+- No user data is stored externally — documents live only on the server's local disk
+- Data sent to Google: document text chunks (for embeddings) and questions (for LLM answers)
+- CORS is configured to allow all origins in development; restrict `ALLOWED_ORIGINS` in production
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m "Add my feature"`
+4. Push and open a Pull Request
 
 ---
 
 ## 📝 License
 
-This project is for educational purposes.
+This project is for **educational purposes**. See [LICENSE](LICENSE) for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- [LangChain](https://langchain.com/) - RAG framework
-- [Google Gemini](https://deepmind.google/technologies/gemini/) - AI model
-- [FAISS](https://github.com/facebookresearch/faiss) - Vector search
-- [FastAPI](https://fastapi.tiangolo.com/) - Backend framework
-- [Next.js](https://nextjs.org/) - Frontend framework
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [LangChain](https://langchain.com/) — RAG orchestration framework
+- [Google Gemini](https://deepmind.google/technologies/gemini/) — LLM and embeddings
+- [FAISS](https://github.com/facebookresearch/faiss) — Facebook AI similarity search
+- [FastAPI](https://fastapi.tiangolo.com/) — High-performance Python API framework
+- [Next.js](https://nextjs.org/) — React framework
+- [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS
 
 ---
 
-<p align="center">
-  Built with ❤️ for legal document analysis
-</p>
+<div align="center">
+
+Built with ❤️ by [Jaimeen Bhagat](https://github.com/jaimeenbhagat)
+
+**[🌐 Live Demo](https://legal-document-analyzer-65ex.onrender.com)** &nbsp;·&nbsp; **[🐛 Report Bug](https://github.com/jaimeenbhagat/Legal-Document-Analyzer/issues)** &nbsp;·&nbsp; **[💡 Request Feature](https://github.com/jaimeenbhagat/Legal-Document-Analyzer/issues)**
+
+</div>
