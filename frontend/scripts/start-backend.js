@@ -20,7 +20,7 @@ console.log(`📁 Project root: ${PROJECT_ROOT}`);
 
 // Start uvicorn with the backend module
 const backend = spawn('uvicorn', [
-  'backend.main:app',
+  'app.main:app',
   '--host', '127.0.0.1',
   '--port', String(BACKEND_PORT),
   '--reload'
