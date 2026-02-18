@@ -19,11 +19,14 @@ RUN npm install --legacy-peer-deps
 # Copy all frontend source files
 COPY frontend/ ./
 
-# Remove stale build cache that can cause path alias issues
-RUN rm -f tsconfig.tsbuildinfo
+# Remove any stale local build artifacts
+RUN rm -f tsconfig.tsbuildinfo && rm -rf .next
 
-# Build static export with STATIC_EXPORT flag
+# Set build-time env vars
 ENV STATIC_EXPORT=true
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build static export using webpack (not turbopack)
 RUN npm run build
 
 # -----------------------------------------------------------------------------
