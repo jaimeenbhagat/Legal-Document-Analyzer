@@ -19,8 +19,12 @@ RUN npm install --legacy-peer-deps
 # Copy all frontend source files
 COPY frontend/ ./
 
-# Remove any stale local build artifacts
-RUN rm -f tsconfig.tsbuildinfo && rm -rf .next
+# Remove any stale local build artifacts and Next.js auto-generated files
+RUN rm -f tsconfig.tsbuildinfo && rm -rf .next && rm -f next-env.d.ts
+
+# Overwrite tsconfig.json to remove Next.js auto-added incremental/.next paths
+# (Next.js modifies tsconfig.json locally; these entries break fresh Docker builds)
+RUN printf '{\n  "compilerOptions": {\n    "baseUrl": ".",\n    "target": "ES2017",\n    "lib": ["dom", "dom.iterable", "esnext"],\n    "allowJs": true,\n    "skipLibCheck": true,\n    "strict": true,\n    "noEmit": true,\n    "esModuleInterop": true,\n    "module": "esnext",\n    "moduleResolution": "bundler",\n    "resolveJsonModule": true,\n    "isolatedModules": true,\n    "jsx": "react-jsx",\n    "plugins": [{"name": "next"}],\n    "paths": {"@/*": ["./*"]}\n  },\n  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts"],\n  "exclude": ["node_modules"]\n}\n' > tsconfig.json
 
 # Set build-time env vars
 ENV STATIC_EXPORT=true
