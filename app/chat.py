@@ -48,12 +48,14 @@ class LegalDocumentChatbot:
     def initialize_vector_store(self) -> bool:
         """
         Load the FAISS vector store into memory.
-        Must be called before querying.
+        Always reloads from disk to pick up latest uploads.
         
         Returns:
             True if vector store loaded successfully, False otherwise
         """
         try:
+            # Always reset so load_vector_store() re-reads from disk
+            self.ingestion_pipeline.vector_store = None
             self.vector_store = self.ingestion_pipeline.get_vector_store()
             
             if self.vector_store is None:

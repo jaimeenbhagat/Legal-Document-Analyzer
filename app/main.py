@@ -263,8 +263,15 @@ async def upload_pdf(files: List[UploadFile] = File(...)):
         print(f"\n⏳ Ingesting {len(saved_paths)} PDF(s)...")
         results = ingestion_pipeline.ingest_multiple_pdfs(saved_paths)
         
-        # Reload vector store in chatbot
-        chatbot.initialize_vector_store()
+        # Directly assign the freshly built vector store to chatbot
+        # (avoids a separate disk reload and any caching issues)
+        if ingestion_pipeline.vector_store is not None:
+            chatbot.vector_store = ingestion_pipeline.vector_store
+            print("✓ Chatbot vector store updated directly from ingestion pipeline")
+        else:
+            # Fallback: force reload from disk
+            chatbot.vector_store = None
+            chatbot.initialize_vector_store()
         
         # Extract just the filenames from saved paths
         processed_filenames = [os.path.basename(path) for path in saved_paths if os.path.basename(path) not in results['failed_files']]
