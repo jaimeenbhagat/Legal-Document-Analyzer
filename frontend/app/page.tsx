@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import PremiumChatInterface from '@/components/PremiumChatInterface';
+import PremiumChatInterface from '../components/PremiumChatInterface';
 import { checkHealth, type HealthResponse } from '../lib/api';
 
 // ============================================
