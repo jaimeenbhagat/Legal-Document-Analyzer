@@ -249,8 +249,8 @@ class DocumentIngestionPipeline:
             return True
         
         except Exception as e:
-            print(f"✗ Ingestion failed: {str(e)}")
-            return False
+            print(f"✗ Ingestion failed for {Path(pdf_path).name}: {type(e).__name__}: {str(e)}")
+            raise  # Re-raise so callers know the real error
     
     
     def ingest_multiple_pdfs(self, pdf_paths: List[str]) -> dict:
@@ -263,14 +263,19 @@ class DocumentIngestionPipeline:
         Returns:
             Dictionary with success/failure counts
         """
-        results = {"success": 0, "failed": 0, "failed_files": []}
+        results = {"success": 0, "failed": 0, "failed_files": [], "last_error": None}
         
         for pdf_path in pdf_paths:
-            if self.ingest_pdf(pdf_path):
-                results["success"] += 1
-            else:
+            try:
+                if self.ingest_pdf(pdf_path):
+                    results["success"] += 1
+                else:
+                    results["failed"] += 1
+                    results["failed_files"].append(pdf_path)
+            except Exception as e:
                 results["failed"] += 1
                 results["failed_files"].append(pdf_path)
+                results["last_error"] = f"{type(e).__name__}: {str(e)}"
         
         return results
     

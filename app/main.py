@@ -321,6 +321,18 @@ async def upload_pdf(files: List[UploadFile] = File(...)):
         print(f"\n⏳ Ingesting {len(saved_paths)} PDF(s)...")
         results = ingestion_pipeline.ingest_multiple_pdfs(saved_paths)
         
+        # If ALL ingestions failed, surface the real error
+        if results['success'] == 0:
+            last_error = results.get('last_error', 'Unknown ingestion error')
+            # Check for API key / quota issues specifically
+            if 'api_key' in last_error.lower() or 'invalid' in last_error.lower() or '401' in last_error or '403' in last_error:
+                detail = "Google API key is invalid or expired. Please update the GOOGLE_API_KEY environment variable on Render."
+            elif 'quota' in last_error.lower() or '429' in last_error:
+                detail = "Google API quota exceeded. Please wait a moment and try again, or check your API quota at Google Cloud Console."
+            else:
+                detail = f"Failed to process documents: {last_error}"
+            raise HTTPException(status_code=500, detail=detail)
+        
         # Directly assign the freshly built vector store to chatbot
         # (avoids a separate disk reload and any caching issues)
         if ingestion_pipeline.vector_store is not None:

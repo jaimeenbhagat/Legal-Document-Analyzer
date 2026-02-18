@@ -527,6 +527,15 @@ export default function PremiumChatInterface({
     try {
       const result = await uploadPDFs(files, activeSessionId);
       
+      // Treat 0 processed files as a failure even if backend returned 200
+      if (result.files_processed === 0) {
+        const failDetail = result.failed_files.length > 0
+          ? result.failed_files.join('\n')
+          : 'The document could not be processed. Please check that your Google API key on Render is valid and has not expired.';
+        addSystemMessage(`Upload failed: ${failDetail}`);
+        return;
+      }
+      
       const currentSession = sessions.find(s => s.id === activeSessionId);
       if (currentSession && !currentSession.isNamed && files.length > 0) {
         const docName = generateSessionName(files[0].name);
