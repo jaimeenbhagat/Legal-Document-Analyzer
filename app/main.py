@@ -119,6 +119,7 @@ async def startup_event():
     2. Initialize ingestion pipeline
     3. Initialize chatbot
     4. Load existing vector store (if any)
+    5. Auto re-ingest PDFs if index is missing but PDFs exist (handles Render restarts)
     """
     global chatbot, ingestion_pipeline
     
@@ -136,6 +137,24 @@ async def startup_event():
     
     # Try to load existing vector store
     chatbot.initialize_vector_store()
+    
+    # Auto re-ingest: if no vector store but PDFs exist on disk, rebuild the index
+    # This handles Render/Docker restarts where FAISS index is wiped but PDFs survived
+    if chatbot.vector_store is None:
+        pdf_dir = Path(settings.pdf_storage_path)
+        existing_pdfs = list(pdf_dir.glob("*.pdf")) if pdf_dir.exists() else []
+        if existing_pdfs:
+            print(f"⚠ No vector store found but {len(existing_pdfs)} PDF(s) exist on disk — re-indexing...")
+            try:
+                pdf_paths = [str(p) for p in existing_pdfs]
+                results = ingestion_pipeline.ingest_multiple_pdfs(pdf_paths)
+                if ingestion_pipeline.vector_store is not None:
+                    chatbot.vector_store = ingestion_pipeline.vector_store
+                    print(f"✓ Auto re-indexed {results['success']} PDF(s) on startup")
+                else:
+                    print("✗ Auto re-index failed — vector store still empty")
+            except Exception as e:
+                print(f"✗ Auto re-index error: {e}")
     
     print(f"✓ Application started successfully")
     print(f"✓ PDF storage: {settings.pdf_storage_path}")

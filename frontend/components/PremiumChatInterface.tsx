@@ -624,7 +624,23 @@ export default function PremiumChatInterface({
       scrollTargetRef.current = 'response-start';
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      addSystemMessage(`Error: ${error instanceof Error ? error.message : 'Something went wrong'}`);
+      const errMsg = error instanceof Error ? error.message : 'Something went wrong';
+      // Detect stale state: backend restarted (Render/Docker) and lost the vector store
+      if (errMsg.includes('No documents uploaded') || errMsg.includes('upload PDFs first')) {
+        // Clear the stale document state from this session
+        setAvailableDocuments([]);
+        setSelectedDocumentFilter(null);
+        setSessions(prev => prev.map(s =>
+          s.id === activeSessionId
+            ? { ...s, documentsUploaded: false, sessionDocuments: [], activeDocument: null }
+            : s
+        ));
+        addSystemMessage(
+          '⚠️ The server was restarted and your documents were lost.\n\nPlease re-upload your PDF to continue. This happens because the deployment uses temporary storage that resets on server restart.'
+        );
+      } else {
+        addSystemMessage(`Error: ${errMsg}`);
+      }
     } finally {
       setLoading(false);
     }
