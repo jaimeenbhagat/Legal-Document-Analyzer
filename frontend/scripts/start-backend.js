@@ -18,8 +18,9 @@ const BACKEND_PORT = process.env.BACKEND_PORT || 8000;
 console.log('🐍 Starting Python backend server...');
 console.log(`📁 Project root: ${PROJECT_ROOT}`);
 
-// Start uvicorn with the backend module
-const backend = spawn('uvicorn', [
+// Start uvicorn via python -m to ensure correct Python environment is used
+const backend = spawn('python', [
+  '-m', 'uvicorn',
   'app.main:app',
   '--host', '127.0.0.1',
   '--port', String(BACKEND_PORT),
