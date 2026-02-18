@@ -6,8 +6,8 @@
     "dev": "concurrently --kill-others \"npm run backend\" \"npm run frontend:dev\"",
     "frontend:dev": "next dev",
     "backend": "node scripts/start-backend.js",
-    "build": "STATIC_EXPORT=true next build --webpack",
-    "build:dev": "next build --webpack",
+    "build": "STATIC_EXPORT=true next build --no-turbopack",
+    "build:dev": "next build --no-turbopack",
     "start": "next start",
     "lint": "eslint"
   },

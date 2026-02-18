@@ -9,7 +9,7 @@ import {
   type ChatMessage, 
   type HealthResponse, 
   type DocumentInfo 
-} from '@/lib/api';
+} from '../lib/api';
 
 // ============================================
 // CUSTOM STYLES & ANIMATIONS

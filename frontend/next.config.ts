@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 /**
  * Next.js Configuration
@@ -20,15 +19,6 @@ const BACKEND_URL =
   "http://localhost:8000";
 
 const nextConfig: NextConfig = {
-  // Explicitly set webpack alias so @/ always resolves to frontend root
-  webpack(config) {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "@": path.resolve(__dirname),
-    };
-    return config;
-  },
-
   // Static export for Docker deployment
   ...(isStaticExport && {
     output: "export",
