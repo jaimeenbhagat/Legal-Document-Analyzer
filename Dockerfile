@@ -25,6 +25,8 @@ RUN rm -f tsconfig.tsbuildinfo && rm -rf .next
 # Set build-time env vars
 ENV STATIC_EXPORT=true
 ENV NEXT_TELEMETRY_DISABLED=1
+# Increase Node.js memory limit for Docker build
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Build static export using webpack (not turbopack)
 RUN npm run build
