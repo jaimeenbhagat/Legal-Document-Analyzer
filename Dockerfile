@@ -8,6 +8,9 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS frontend-builder
 
+# Cache bust - increment this to force a fresh build
+ARG CACHE_BUST=3
+
 WORKDIR /app
 
 # Copy package files first (better layer caching)

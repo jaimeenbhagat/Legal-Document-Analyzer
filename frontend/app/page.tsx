@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import PremiumChatInterface from '../components/PremiumChatInterface';
-import { checkHealth, type HealthResponse } from '../lib/api';
+import { checkHealth, type HealthResponse } from './api';
 
 // ============================================
 // MAIN PAGE COMPONENT - Clean, Compact UI
