@@ -8,18 +8,22 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS frontend-builder
 
-WORKDIR /frontend
+WORKDIR /app
 
-# Copy package files
-COPY frontend/package*.json ./
+# Copy package files first (better layer caching)
+COPY frontend/package.json frontend/package-lock.json* ./
 
 # Install dependencies
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
-# Copy frontend source
+# Copy all frontend source files
 COPY frontend/ ./
 
-# Build static export
+# Remove stale build cache that can cause path alias issues
+RUN rm -f tsconfig.tsbuildinfo
+
+# Build static export with STATIC_EXPORT flag
+ENV STATIC_EXPORT=true
 RUN npm run build
 
 # -----------------------------------------------------------------------------
@@ -49,8 +53,8 @@ COPY app/ ./app/
 # Copy data directory (FAISS indexes and PDFs)
 COPY data/ ./data/
 
-# Copy static frontend build from Stage 1
-COPY --from=frontend-builder /frontend/out ./static
+# Copy static frontend build from Stage 1 (WORKDIR was /app, output is /app/out)
+COPY --from=frontend-builder /app/out ./static
 
 # Create directories for runtime data
 RUN mkdir -p ./data/pdfs ./data/faiss_index

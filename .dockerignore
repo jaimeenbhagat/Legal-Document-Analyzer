@@ -27,6 +27,7 @@ node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+frontend/tsconfig.tsbuildinfo
 .npm
 *.log
 npm-debug.log*
