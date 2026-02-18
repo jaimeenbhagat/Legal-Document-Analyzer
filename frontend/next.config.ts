@@ -19,6 +19,11 @@ const BACKEND_URL =
   "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  // Increase proxy timeout to 120s for slow Gemini API responses
+  experimental: {
+    proxyTimeout: 120000,
+  },
+
   // Static export for Docker deployment
   ...(isStaticExport && {
     output: "export",

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from app.config import get_settings, ensure_directories
 from app.ingest import DocumentIngestionPipeline
 from app.chat import LegalDocumentChatbot
+from app.validator import get_document_validator
 
 
 # Check if we're running in Docker with static frontend
@@ -236,6 +237,10 @@ async def upload_pdf(files: List[UploadFile] = File(...)):
     settings = get_settings()
     saved_paths = []
     failed_files = []
+    validation_results = []
+    
+    # Get validator instance
+    validator = get_document_validator()
     
     # Step 1: Validate and save files
     for file in files:
@@ -245,18 +250,52 @@ async def upload_pdf(files: List[UploadFile] = File(...)):
             continue
         
         try:
-            # Save file to storage directory
+            # Save file to a temp path first for validation
             file_path = os.path.join(settings.pdf_storage_path, file.filename)
             
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             
+            # Validate the saved PDF is a legal document
+            print(f"🔍 Validating: {file.filename}")
+            validation = validator.validate_document(file_path)
+            validation_results.append({
+                "filename": file.filename,
+                "is_valid": validation["is_valid"],
+                "document_type": validation["document_type"],
+                "reason": validation["reason"],
+                "confidence": validation["confidence"]
+            })
+            
+            if not validation["is_valid"]:
+                # Remove the saved file — it's not a legal document
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+                failed_files.append(f"{file.filename} (not a legal document: {validation['reason']})")
+                print(f"✗ Rejected (non-legal): {file.filename} — {validation['reason']}")
+                continue
+            
             saved_paths.append(file_path)
-            print(f"✓ Saved: {file.filename}")
+            print(f"✓ Saved & validated: {file.filename}")
         
         except Exception as e:
             failed_files.append(f"{file.filename} (save error: {str(e)})")
             print(f"✗ Failed to save: {file.filename}")
+    
+    # If ALL files were rejected due to validation, raise a clear 422 error
+    if not saved_paths and validation_results and all(not v["is_valid"] for v in validation_results):
+        rejected = [v["filename"] for v in validation_results if not v["is_valid"]]
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": f"The uploaded file(s) do not appear to be legal documents.",
+                "rejected_files": rejected,
+                "validation_results": validation_results,
+                "hint": "Please upload legal documents such as contracts, court judgments, agreements, or legal notices."
+            }
+        )
     
     # Step 2: Ingest saved PDFs
     if saved_paths:
@@ -397,6 +436,52 @@ async def analyze_document(analysis_type: str):
             status_code=500,
             detail=f"Error during analysis: {str(e)}"
         )
+
+
+@app.post("/reset")
+@app.post("/api/reset")
+async def reset_session():
+    """
+    Reset the system by clearing the vector store and all uploaded PDFs.
+    Called when the user starts a new session.
+    """
+    global chatbot, ingestion_pipeline
+    settings = get_settings()
+    deleted_files = []
+    errors = []
+
+    # Clear in-memory vector store
+    chatbot.vector_store = None
+    ingestion_pipeline.vector_store = None
+
+    # Delete all PDFs from storage
+    try:
+        pdf_dir = Path(settings.pdf_storage_path)
+        if pdf_dir.exists():
+            for pdf_file in pdf_dir.glob("*.pdf"):
+                try:
+                    pdf_file.unlink()
+                    deleted_files.append(pdf_file.name)
+                except Exception as e:
+                    errors.append(f"Could not delete {pdf_file.name}: {str(e)}")
+    except Exception as e:
+        errors.append(f"Error clearing PDFs: {str(e)}")
+
+    # Delete FAISS index from disk
+    try:
+        index_dir = Path(settings.faiss_index_path)
+        if index_dir.exists():
+            shutil.rmtree(index_dir, ignore_errors=True)
+            index_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        errors.append(f"Error clearing index: {str(e)}")
+
+    return {
+        "status": "reset",
+        "message": "Session reset successfully",
+        "deleted_files": deleted_files,
+        "errors": errors if errors else None
+    }
 
 
 # =============================================================================

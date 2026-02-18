@@ -32,9 +32,9 @@ class LegalDocumentChatbot:
         
         # Initialize LLM (Gemini)
         # Temperature kept low (0.1) to reduce creativity/hallucination
-        # Using gemini-2.0-flash (latest stable model)
+        # Using gemini-1.5-flash - better free tier quota than gemini-2.0-flash
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             google_api_key=self.settings.google_api_key,
             temperature=self.settings.temperature,
             convert_system_message_to_human=True  # Gemini compatibility

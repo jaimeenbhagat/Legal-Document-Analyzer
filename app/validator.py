@@ -112,7 +112,7 @@ class DocumentValidator:
         
         # Initialize LLM for document classification
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             google_api_key=self.settings.google_api_key,
             temperature=0.1,  # Low temperature for consistent classification
             convert_system_message_to_human=True

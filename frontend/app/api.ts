@@ -159,25 +159,33 @@ export async function sendChatMessage(
   documentFilter?: string[],
   sessionId?: string
 ): Promise<ChatResponse> {
-  const response = await fetch(`${API_BASE}/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      question,
-      top_k: topK || 4,
-      document_filter: documentFilter || null,
-      session_id: sessionId || null,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 115000); // 115s timeout
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Chat request failed');
+  try {
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        question,
+        top_k: topK || 4,
+        document_filter: documentFilter || null,
+        session_id: sessionId || null,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Chat request failed');
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.json();
 }
 
 /**

@@ -5,11 +5,50 @@ import {
   sendChatMessage, 
   uploadPDFs, 
   checkHealth, 
-  getDocuments, 
+  resetSession,
   type ChatMessage, 
   type HealthResponse, 
   type DocumentInfo 
 } from '../app/api';
+
+// ============================================
+// LOCAL STORAGE HOOK
+// ============================================
+
+function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void, boolean] {
+  // Always start with initialValue so server & first client render match (no hydration mismatch).
+  // After mount, overwrite with whatever is in localStorage.
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    // Only runs on the client, after first paint — safe to read localStorage
+    try {
+      const item = window.localStorage.getItem(key);
+      if (item) {
+        setStoredValue(JSON.parse(item) as T);
+      }
+    } catch {
+      // ignore parse errors
+    }
+    setHydrated(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    setStoredValue(prev => {
+      const next = typeof value === 'function' ? (value as (prev: T) => T)(prev) : value;
+      try {
+        window.localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // localStorage full or unavailable — silently ignore
+      }
+      return next;
+    });
+  }, [key]);
+
+  return [storedValue, setValue, hydrated];
+}
 
 // ============================================
 // CUSTOM STYLES & ANIMATIONS
@@ -207,16 +246,21 @@ export default function PremiumChatInterface({
   onHealthUpdate, 
   onRequestHealthCheck 
 }: PremiumChatInterfaceProps) {
-  // State
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  // ── Persisted state (survives page reload) ─────────────────────────────────
+  const [sessions, setSessions, sessionsHydrated] = useLocalStorage<Session[]>('lda_sessions', []);
+  const [activeSessionId, setActiveSessionId] = useLocalStorage<string | null>('lda_active_session', null);
+  // sessionsHydrated becomes true once localStorage has been read on the client
+
+  // ── Ephemeral state (reset every render, derived from active session) ──────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [availableDocuments, setAvailableDocuments] = useState<DocumentInfo[]>([]);
+  const [selectedDocumentFilter, setSelectedDocumentFilter] = useState<string | null>(null);
+
+  // ── UI-only state ──────────────────────────────────────────────────────────
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-  const [availableDocuments, setAvailableDocuments] = useState<DocumentInfo[]>([]);
-  const [selectedDocumentFilter, setSelectedDocumentFilter] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showDocumentPicker, setShowDocumentPicker] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
@@ -225,8 +269,12 @@ export default function PremiumChatInterface({
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastResponseStartRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 'end' = scroll to bottom (session restore / switch)
+  // 'response-start' = scroll to top of last AI reply (new response arrived)
+  const scrollTargetRef = useRef<'end' | 'response-start'>('end');
 
   // Suppress unused variable warnings
   void health;
@@ -258,15 +306,93 @@ export default function PremiumChatInterface({
     if (isMobile) setShowSidebar(false);
   }, [isMobile]);
 
+  // Restore active session's data once localStorage has finished loading
   useEffect(() => {
-    if (sessions.length === 0) {
+    if (!sessionsHydrated) return; // wait for localStorage to load
+
+    // Deduplicate: remove extra empty sessions, keeping at most one
+    const nonEmptySessions = sessions.filter(
+      s => s.messages.length > 0 || s.sessionDocuments.length > 0
+    );
+    const emptySessions = sessions.filter(
+      s => s.messages.length === 0 && s.sessionDocuments.length === 0
+    );
+    // Keep only the most-recent empty session (first in list, since we prepend)
+    const deduped = emptySessions.length > 0
+      ? [emptySessions[0], ...nonEmptySessions]
+      : nonEmptySessions;
+    if (deduped.length !== sessions.length) {
+      // Persist the cleaned-up list
+      setSessions(deduped);
+      // If the active session was one of the removed duplicates, reset to first
+      if (activeSessionId && !deduped.find(s => s.id === activeSessionId)) {
+        const fallback = deduped[0] || null;
+        if (fallback) {
+          setActiveSessionId(fallback.id);
+          setMessages(fallback.messages);
+          setAvailableDocuments(
+            fallback.sessionDocuments.map(filename => ({ filename, page_count: 0, chunk_count: 0 }))
+          );
+          setSelectedDocumentFilter(fallback.activeDocument);
+        }
+        return;
+      }
+    }
+
+    if (activeSessionId) {
+      const session = deduped.find(s => s.id === activeSessionId);
+      if (session) {
+        setMessages(session.messages);
+        setAvailableDocuments(
+          session.sessionDocuments.map(filename => ({ filename, page_count: 0, chunk_count: 0 }))
+        );
+        setSelectedDocumentFilter(session.activeDocument);
+        return;
+      }
+    }
+    // No active session or not found — restore to first, or create one fresh
+    if (deduped.length === 0) {
       createNewSession();
+    } else {
+      // Restore to first existing session
+      const first = deduped[0];
+      setActiveSessionId(first.id);
+      setMessages(first.messages);
+      setAvailableDocuments(
+        first.sessionDocuments.map(filename => ({ filename, page_count: 0, chunk_count: 0 }))
+      );
+      setSelectedDocumentFilter(first.activeDocument);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionsHydrated]);
+
+  // Auto-save messages & documents into the session whenever they change
+  useEffect(() => {
+    if (!activeSessionId) return;
+    setSessions(prev => prev.map(session =>
+      session.id === activeSessionId
+        ? {
+            ...session,
+            messages,
+            documentsUploaded: availableDocuments.length > 0,
+            sessionDocuments: availableDocuments.map(d => d.filename),
+            activeDocument: selectedDocumentFilter,
+          }
+        : session
+    ));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, availableDocuments, selectedDocumentFilter]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollTargetRef.current === 'response-start') {
+      // Scroll so the top of the new AI response is visible
+      lastResponseStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // Default: scroll to bottom (session restore, switch, etc.)
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Reset to default after every scroll
+    scrollTargetRef.current = 'end';
   }, [messages]);
 
   useEffect(() => {
@@ -288,24 +414,25 @@ export default function PremiumChatInterface({
     return 'New conversation';
   };
 
-  const saveCurrentSession = useCallback(() => {
-    if (activeSessionId && messages.length > 0) {
-      setSessions(prev => prev.map(session => 
-        session.id === activeSessionId 
-          ? { 
-              ...session, 
-              messages, 
-              documentsUploaded: availableDocuments.length > 0,
-              sessionDocuments: availableDocuments.map(d => d.filename),
-              activeDocument: selectedDocumentFilter
-            } 
-          : session
-      ));
+  const createNewSession = async () => {
+    // If the current session is already empty (no messages, no docs), don't create another one
+    if (activeSessionId) {
+      const current = sessions.find(s => s.id === activeSessionId);
+      if (current && current.messages.length === 0 && current.sessionDocuments.length === 0) {
+        // Already on a fresh empty session — nothing to do
+        if (isMobile) setShowSidebar(false);
+        return;
+      }
     }
-  }, [activeSessionId, messages, availableDocuments, selectedDocumentFilter]);
 
-  const createNewSession = () => {
-    saveCurrentSession();
+    // Reset the backend state so previous session's documents are cleared
+    try {
+      await resetSession();
+      console.log('✓ Backend reset for new session');
+    } catch (err) {
+      console.warn('Could not reset backend session:', err);
+    }
+    
     const newSession: Session = {
       id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: 'New conversation',
@@ -326,9 +453,9 @@ export default function PremiumChatInterface({
     if (isMobile) setShowSidebar(false);
   };
 
-  const switchSession = async (sessionId: string) => {
+  const switchSession = (sessionId: string) => {
     if (sessionId === activeSessionId) return;
-    saveCurrentSession();
+    // No need to manually save — auto-save effect already persisted the state
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
       setActiveSessionId(sessionId);
@@ -337,18 +464,13 @@ export default function PremiumChatInterface({
       setShowDocumentPicker(false);
       setPendingQuery(null);
       
-      if (session.documentsUploaded && session.sessionDocuments.length > 0) {
-        try {
-          const status = await checkHealth(sessionId);
-          onHealthUpdate(status);
-          const docsResponse = await getDocuments(sessionId);
-          setAvailableDocuments(docsResponse.documents);
-        } catch {
-          setAvailableDocuments([]);
-        }
-      } else {
-        setAvailableDocuments([]);
-      }
+      // Restore this session's documents from saved state
+      const restoredDocs: DocumentInfo[] = session.sessionDocuments.map(filename => ({
+        filename,
+        page_count: 0,
+        chunk_count: 0,
+      }));
+      setAvailableDocuments(restoredDocs);
     }
     if (isMobile) setShowSidebar(false);
   };
@@ -419,16 +541,31 @@ export default function PremiumChatInterface({
       const status = await checkHealth(activeSessionId);
       onHealthUpdate(status);
       
-      const docsResponse = await getDocuments(activeSessionId);
-      setAvailableDocuments(docsResponse.documents);
+      // Build document list from the upload result (session-scoped) instead of
+      // calling getDocuments() which returns ALL docs from the global backend,
+      // including documents from previous sessions.
+      const sessionDocs: DocumentInfo[] = (result.processed_files ?? []).map(filename => ({
+        filename,
+        page_count: 0,
+        chunk_count: 0,
+      }));
+      
+      // Merge with any docs already in this session (for multi-upload scenarios)
+      const existingFilenames = new Set(availableDocuments.map(d => d.filename));
+      const mergedDocs = [
+        ...availableDocuments,
+        ...sessionDocs.filter(d => !existingFilenames.has(d.filename)),
+      ];
+      
+      setAvailableDocuments(mergedDocs);
       
       setSessions(prev => prev.map(session =>
         session.id === activeSessionId 
-          ? { ...session, documentsUploaded: true, sessionDocuments: docsResponse.documents.map(d => d.filename) }
+          ? { ...session, documentsUploaded: true, sessionDocuments: mergedDocs.map(d => d.filename) }
           : session
       ));
       
-      addSystemMessage(`✓ ${result.files_processed} document${result.files_processed > 1 ? 's' : ''} uploaded successfully`);
+      addSystemMessage(`✓ ${result.files_processed} document${result.files_processed > 1 ? 's' : ''} uploaded successfully\n\nYou can now ask questions about your document. Here are some things you can try:\n• "Summarize this document"\n• "What are the key obligations of each party?"\n• "What are the termination clauses?"\n• "What risks or liabilities are mentioned?"\n• "Who are the parties involved?"`);
     } catch (error) {
       addSystemMessage(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -483,6 +620,8 @@ export default function PremiumChatInterface({
         risk_reason: response.risk_reason,
         documents_used: response.documents_used
       };
+      // Scroll to the TOP of the new response so the user reads from the start
+      scrollTargetRef.current = 'response-start';
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       addSystemMessage(`Error: ${error instanceof Error ? error.message : 'Something went wrong'}`);
@@ -661,27 +800,27 @@ export default function PremiumChatInterface({
   );
 
   const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center h-full py-12">
+    <div className="flex flex-col items-center justify-center h-full py-4">
       {!hasDocuments ? (
         <div className="w-full max-w-sm mx-auto text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-300/50">
-            <span className="text-white text-2xl"><Icons.Scale /></span>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-purple-300/50">
+            <span className="text-white text-lg"><Icons.Scale /></span>
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-purple-700 to-indigo-700 bg-clip-text text-transparent mb-3">Legal AI Assistant</h2>
-          <p className="text-slate-500 text-sm mb-8 leading-relaxed">Upload legal documents to get AI-powered analysis with intelligent insights</p>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 via-purple-700 to-indigo-700 bg-clip-text text-transparent mb-1">Legal AI Assistant</h2>
+          <p className="text-slate-500 text-sm mb-4 leading-relaxed">Upload legal documents to get AI-powered analysis with intelligent insights</p>
           
           <div 
-            className={`border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-all duration-300 hover-lift ${
+            className={`border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all duration-300 hover-lift ${
               dragActive 
                 ? 'border-purple-500 bg-purple-50/80 scale-[1.02]' 
                 : 'border-slate-300 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50/50 hover:to-indigo-50/50'
             }`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center mx-auto mb-4 transition-transform duration-300 group-hover:scale-110">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center mx-auto mb-2 transition-transform duration-300 group-hover:scale-110">
               <span className="text-purple-500"><Icons.Upload /></span>
             </div>
-            <p className="font-semibold text-slate-700 mb-1">Drop PDFs here</p>
+            <p className="font-semibold text-slate-700 mb-0.5">Drop PDFs here</p>
             <p className="text-sm text-slate-400">or click to browse</p>
           </div>
         </div>
@@ -897,9 +1036,17 @@ export default function PremiumChatInterface({
               <EmptyState />
             ) : (
               <>
-                {messages.map((message, index) => (
-                  <MessageBubble key={index} message={message} />
-                ))}
+                {messages.map((message, index) => {
+                  // Attach ref to the last assistant message so we can scroll to its top
+                  const isLastAssistant =
+                    message.role === 'assistant' &&
+                    !messages.slice(index + 1).some(m => m.role === 'assistant');
+                  return (
+                    <div key={index} ref={isLastAssistant ? lastResponseStartRef : null}>
+                      <MessageBubble message={message} />
+                    </div>
+                  );
+                })}
                 {loading && <TypingIndicator />}
               </>
             )}
